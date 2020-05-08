@@ -62,17 +62,17 @@ class DSCIT100(threading.Thread):
     print("User closing=",data)
     self.publish("stat/"+self.clientId+"/partitions/"+data[0],"closed")
     self.publish("stat/"+self.clientId+"/partitions/"+data[0]+"/changedBy",data[1:4])
-    self.publish("stat/"+self.clientId+"/partitions/"+data[0]+"/changedOn",datetime.datetime.now())
+    self.publish("stat/"+self.clientId+"/partitions/"+data[0]+"/changedOn",datetime.datetime.now().isoformat(timespec="seconds"))
   
   def c750(self, cmd, data):
     print("User opening=",data)
     self.publish("stat/"+self.clientId+"/partitions/"+data[0],"open")
     self.publish("stat/"+self.clientId+"/partitions/"+data[0]+"/changedBy",data[1:4])
-    self.publish("stat/"+self.clientId+"/partitions/"+data[0]+"/changedOn",datetime.datetime.now())
+    self.publish("stat/"+self.clientId+"/partitions/"+data[0]+"/changedOn",datetime.datetime.now().isoformat(timespec="seconds"))
   
   def c901(self, cmd, data):
     print("Alive=",data)
-    self.publish("stat/"+self.clientId+"/alive","1")
+    self.publish("stat/"+self.clientId+"/alive",datetime.datetime.now().isoformat(timespec="seconds"))
   
   def unknown(self,cmd,data):
     print("Unknown cmd=",cmd," data=",data)
