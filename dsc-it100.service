@@ -1,0 +1,11 @@
+[Unit]
+Description=DSC IT-100 MQTT client
+
+[Service]
+WorkingDirectory=/home/openhabian/
+User=openhabian
+ExecStart=/usr/bin/python3 /home/openhabian/dsc-it100.py
+Environment=PYTHONUNBUFFERED=1
+
+[Install]
+WantedBy=default.target
