@@ -42,11 +42,8 @@ class DSCIT100(threading.Thread):
     print("Reading serial port")
     ret=self.ser.read_until()
     while self.running:
-      print("RET=",ret)
       if ret != b'':
         self.process(ret[:3].decode('ASCII'),ret[3:-4].decode('ASCII')) # get command and data - remove checksum and CRLF from end
-      else:
-        print (".", end=" ")
       ret=self.ser.read_until()
   
   def sendCommand(self, arr):
