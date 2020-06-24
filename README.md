@@ -13,6 +13,18 @@ DSC IT-100 MQTT client
 1. enable and start service\
     `sudo systemctl enable dsc-it100.service`\
     `sudo systemctl start dsc-it100.service`
+1. create empty logrotate configuration in /etc/logrotate.d/dsc-it100
+1. copy-paste following configuration\
+    ```/var/log/dsc-it100.log {
+      size 5M
+      rotate 3
+      missingok
+      dateext
+      copytruncate
+      compress
+      delaycompress
+    }```
+ 1. restart logrotate service
 
 # Usage
 1. check service status
