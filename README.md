@@ -3,6 +3,9 @@ DSC IT-100 MQTT client
 
 # Installation
 1. copy script to any directory, e.g. user home
+1. prepare empty log file\
+   `sudo touch /var/log/dsc-it100.log`\
+   `sudo chown openhabian /var/log/dsc-it100.log`
 1. copy `dsc-it100.service` to `/lib/systemd/system`
 1. modify service file as needed
 1. make systemctl daemon aware of new service, run\

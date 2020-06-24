@@ -14,9 +14,10 @@ password    = "<<password>>"
 clientId    = "dscNH8"
 deviceName  = "DSC IT-100"
 serialPort  = "/dev/ttyUSB0"
+LOGFILE     = "/var/log/dsc-it100.log"
 
 class DSCIT100(threading.Thread):
-  def __init__(self, clientId, name, mqttClient, serialPort):
+  def __init__(self, clientId, name, mqttClient, serialPort, logFile):
     threading.Thread.__init__(self)
     self.clientId = clientId
     self.name = name
@@ -24,6 +25,8 @@ class DSCIT100(threading.Thread):
     self.receivedMessages = []
     self.mqtt = mqttClient
     self.ser = serialPort
+    self.logF = logFile
+    self.f = 0
     self.mqtt.on_message = self.on_message
     self.mqtt.on_publish = self.on_publish
     self.mqtt.on_connect = self.on_mqtt_connect
@@ -31,44 +34,51 @@ class DSCIT100(threading.Thread):
   
   def run(self):
     print("Starting " + self.name)
-    
-    print("Starting MQTT client")
+    print("Opening log file " + self.logF)
+    self.f = open(self.logF, "a")
+    self.log("I","*** DSC-IT100 Starting")
+    self.log("I","Starting MQTT client")
     self.mqtt.loop_start()
     self.mqtt.subscribe("cmd/"+self.clientId)
     
-    print("Reading serial port")
+    print("Starting processing loop")
     ret=self.ser.read_until()
     while self.running:
       if self.mqtt_reconnect > 0:
-        print("Trying to reconnect...")
+        self.log("W","MQTT Reconnecting...")
         self.mqtt.reconnect()
       else:
         if ret != b'':
+          self.log("I",">="+ret[:-2].decode('ASCII'))
           self.process(ret[:3].decode('ASCII'),ret[3:-4].decode('ASCII')) # get command and data - remove checksum and CRLF from end
       ret=self.ser.read_until()
   
+  def log(self, l,s):
+    print(datetime.datetime.now().isoformat(timespec="seconds") + "  " + l + "  " + s)
+    self.f.write(datetime.datetime.now().isoformat(timespec="seconds") + "  " + l + "  " + s + "\n")
+  
   def sendCommand(self, arr):
-    print("Sending arr=",arr)
+    self.log("I","DSC Sending arr="+arr)
     self.ser.write(arr)     # write a string  
   
   def c609(self, cmd, data):
-    #print("Zone open=",data)
+    self.log("I","DSC Zone open="+data)
     self.publish("stat/"+self.clientId+"/zones/"+data,"open")
   
   def c610(self, cmd, data):
-    #print("Zone restored=",data)
+    self.log("I","DSC Zone restored="+data)
     self.publish("stat/"+self.clientId+"/zones/"+data,"closed")
   
   def c650(self, cmd, data):
-    #print("Partition ready=",data)
+    self.log("I","DSC Partition ready="+data)
     self.publish("stat/"+self.clientId+"/partitions/"+data,"open-ready")
   
   def c651(self, cmd, data):
-    #print("Partition not ready=",data)
+    self.log("I","DSC Partition not ready="+data)
     self.publish("stat/"+self.clientId+"/partitions/"+data,"open-not ready")
   
   def c652(self, cmd, data):
-    #print("Partition armed=",data)
+    self.log("I","DSC Partition armed="+data)
     mode = {
       '000' : 'away',
       '001' : 'stay',
@@ -81,45 +91,45 @@ class DSCIT100(threading.Thread):
     self.publish("stat/"+self.clientId+"/partitions/"+data+"/armedOn",datetime.datetime.now().isoformat(timespec="seconds"))
   
   def c654(self, cmd, data):
-    #print("Partition alarm=",data)
+    self.log("I","DSC Partition alarm="+data)
     self.publish("stat/"+self.clientId+"/partitions/"+data,"ALARM")
   
   def c655(self, cmd, data):
-    #print("Partition disarmed=",data)
+    self.log("I","DSC Partition disarmed="+data)
     self.publish("stat/"+self.clientId+"/partitions/"+data,"disarmed")
     self.publish("stat/"+self.clientId+"/partitions/"+data+"/armed","off")
     self.publish("stat/"+self.clientId+"/partitions/"+data+"/armedOn",datetime.datetime.now().isoformat(timespec="seconds"))
   
   def c656(self, cmd, data):
-    #print("Partition exit delay=",data)
+    self.log("I","DSC Partition exit delay="+data)
     self.publish("stat/"+self.clientId+"/partitions/"+data,"exit-delay")
   
   def c657(self, cmd, data):
-    #print("Partition entry delay=",data)
+    self.log("I","DSC Partition entry delay="+data)
     self.publish("stat/"+self.clientId+"/partitions/"+data,"entry-delay")
   
   def c672(self, cmd, data):
-    #print("Partition failed to arm=",data)
+    self.log("I","DSC Partition failed to arm="+data)
     self.publish("stat/"+self.clientId+"/partitions/"+data,"failed to arm")
   
   def c700(self, cmd, data):
-    #print("User closing=",data)
+    self.log("I","User closing="+data)
     self.publish("stat/"+self.clientId+"/partitions/"+data[0],"closing")
     self.publish("stat/"+self.clientId+"/partitions/"+data[0]+"/changedBy",data[1:4])
     self.publish("stat/"+self.clientId+"/partitions/"+data[0]+"/changedOn",datetime.datetime.now().isoformat(timespec="seconds"))
   
   def c750(self, cmd, data):
-    #print("User opening=",data)
+    self.log("I","DSC User opening="+data)
     self.publish("stat/"+self.clientId+"/partitions/"+data[0],"opening")
     self.publish("stat/"+self.clientId+"/partitions/"+data[0]+"/changedBy",data[1:4])
     self.publish("stat/"+self.clientId+"/partitions/"+data[0]+"/changedOn",datetime.datetime.now().isoformat(timespec="seconds"))
   
   def c901(self, cmd, data):
-    #print("Alive=",data)
+    self.log("I","Alive="+data)
     self.publish("stat/"+self.clientId+"/alive",datetime.datetime.now().isoformat(timespec="seconds"))
   
   def c903(self, cmd, data):
-    #print("LED status=",data)
+    self.log("I","DSC LED status="+data)
     led = {
       '1' : 'ready',
       '2' : 'armed',
@@ -143,7 +153,7 @@ class DSCIT100(threading.Thread):
     time.sleep(0.1)
   
   def unknown(self,cmd,data):
-    print("Unknown cmd=",cmd," data=",data)
+    self.log("W","DSC unknown cmd="+cmd+" data="+data)
   
   def process(self, cmd, data):
     f = {
@@ -169,7 +179,7 @@ class DSCIT100(threading.Thread):
   
   # display all incoming messages
   def on_message(self, userdata, message):
-    print("Received operation ", str(message.payload))
+    self.log("I","MQTT received msg="+str(message.payload))
   
   def on_publish(self, userdata, mid):
     self.receivedMessages.append(mid)
@@ -178,17 +188,17 @@ class DSCIT100(threading.Thread):
     self.mqtt_connected = rc
     self.mqtt_reconnect = 0
     if rc != 0:
-      print("Connection returned result: ",rc)
+      self.log("E","MQTT connection returned result="+rc)
       self.mqtt_reconnect += 1
       if self.mqtt_reconnect > 12: self.mqtt_reconnect = 12
       self.mqtt_reconnect_delay = 2**self.mqtt_reconnect
     else:
-      print("Connected to MQTT broker.")
+      self.log("I","Connected to MQTT broker.")
   
   def on_mqtt_disconnect(self, client, userdata, rc):
     self.mqtt_reconnect = 1
     if rc != 0:
-      print("Unexpected disconnection.")
+      self.log("E","MQTT unexpected disconnection.")
       self.mqtt_reconnect = True
       self.mqtt_reconnect_delay = 10
   
@@ -213,7 +223,7 @@ mqtt.username_pw_set(username, password)
 mqtt.connect_async(serverUrl)
 
 print("Creating DSC IT-100 device as",clientId)
-dsc = DSCIT100(clientId, deviceName, mqtt, ser)
+dsc = DSCIT100(clientId, deviceName, mqtt, ser, LOGFILE)
 dsc.start()
 
 time.sleep(30)
