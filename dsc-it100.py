@@ -93,9 +93,9 @@ class DSCIT100(threading.Thread):
     self.ser = serialPort
     self.log = logging.getLogger("dsc")
     self.f = 0
-    self.mqtt.on_message = self.on_message
-    self.mqtt.on_publish = self.on_publish
-    self.mqtt.on_connect = self.on_mqtt_connect
+    self.mqtt.on_message = self._on_message
+    self.mqtt.on_publish = self._on_publish
+    self.mqtt.on_connect = self._on_mqtt_connect
     self.mqtt_reconnect = 0
 
   def stop(self):
@@ -107,7 +107,7 @@ class DSCIT100(threading.Thread):
     self.log.info("*** DSC-IT100 Starting")
     self.log.info("Starting MQTT client")
     self.mqtt.loop_start()
-    self.mqtt.subscribe("cmd/"+self.clientId)
+    self.mqtt.subscribe(self.clientId+"/cmd")
     
     print("Starting processing loop")
     ret=self.ser.read_until()
@@ -127,19 +127,19 @@ class DSCIT100(threading.Thread):
   
   def c609(self, cmd, data):
     self.log.info("DSC Zone open=%s",data)
-    self.publish("stat/"+self.clientId+"/zones/"+data,"open")
+    self.publish("zones/"+data,"open")
   
   def c610(self, cmd, data):
     self.log.info("DSC Zone restored=%s",data)
-    self.publish("stat/"+self.clientId+"/zones/"+data,"closed")
+    self.publish("zones/"+data,"closed")
   
   def c650(self, cmd, data):
     self.log.info("DSC Partition ready=%s",data)
-    self.publish("stat/"+self.clientId+"/partitions/"+data,"open-ready")
+    self.publish("partitions/"+data,"open-ready")
   
   def c651(self, cmd, data):
     self.log.info("DSC Partition not ready=%s",data)
-    self.publish("stat/"+self.clientId+"/partitions/"+data,"open-not ready")
+    self.publish("partitions/"+data,"open-not ready")
   
   def c652(self, cmd, data):
     self.log.info("DSC Partition armed=%s",data)
@@ -150,47 +150,47 @@ class DSCIT100(threading.Thread):
       '003' : 'stay-no delay',
       '004' : 'night'
     }.get(data[1:3], 'unknown')
-    self.publish("stat/"+self.clientId+"/partitions/"+data[0],"armed "+mode)
-    self.publish("stat/"+self.clientId+"/partitions/"+data+"/armed","on")
-    self.publish("stat/"+self.clientId+"/partitions/"+data+"/armedOn",time.strftime("%Y-%m-%dT%H:%M:%S"))
+    self.publish("partitions/"+data[0],"armed "+mode)
+    self.publish("partitions/"+data+"/armed","on")
+    self.publish("partitions/"+data+"/armedOn",time.strftime("%Y-%m-%dT%H:%M:%S"))
   
   def c654(self, cmd, data):
     self.log.info("DSC Partition alarm=%s",data)
-    self.publish("stat/"+self.clientId+"/partitions/"+data,"ALARM")
+    self.publish("partitions/"+data,"ALARM")
   
   def c655(self, cmd, data):
     self.log.info("DSC Partition disarmed=%s",data)
-    self.publish("stat/"+self.clientId+"/partitions/"+data,"disarmed")
-    self.publish("stat/"+self.clientId+"/partitions/"+data+"/armed","off")
-    self.publish("stat/"+self.clientId+"/partitions/"+data+"/armedOn",time.strftime("%Y-%m-%dT%H:%M:%S"))
+    self.publish("partitions/"+data,"disarmed")
+    self.publish("partitions/"+data+"/armed","off")
+    self.publish("partitions/"+data+"/armedOn",time.strftime("%Y-%m-%dT%H:%M:%S"))
   
   def c656(self, cmd, data):
     self.log.info("DSC Partition exit delay=%s",data)
-    self.publish("stat/"+self.clientId+"/partitions/"+data,"exit-delay")
+    self.publish("partitions/"+data,"exit-delay")
   
   def c657(self, cmd, data):
     self.log.info("DSC Partition entry delay=%s",data)
-    self.publish("stat/"+self.clientId+"/partitions/"+data,"entry-delay")
+    self.publish("partitions/"+data,"entry-delay")
   
   def c672(self, cmd, data):
     self.log.info("DSC Partition failed to arm=%s",data)
-    self.publish("stat/"+self.clientId+"/partitions/"+data,"failed to arm")
+    self.publish("partitions/"+data,"failed to arm")
   
   def c700(self, cmd, data):
     self.log.info("User closing=%s",data)
-    self.publish("stat/"+self.clientId+"/partitions/"+data[0],"closing")
-    self.publish("stat/"+self.clientId+"/partitions/"+data[0]+"/changedBy",data[1:4])
-    self.publish("stat/"+self.clientId+"/partitions/"+data[0]+"/changedOn",time.strftime("%Y-%m-%dT%H:%M:%S"))
+    self.publish("partitions/"+data[0],"closing")
+    self.publish("partitions/"+data[0]+"/changedBy",data[1:4])
+    self.publish("partitions/"+data[0]+"/changedOn",time.strftime("%Y-%m-%dT%H:%M:%S"))
   
   def c750(self, cmd, data):
     self.log.info("DSC User opening=%s",data)
-    self.publish("stat/"+self.clientId+"/partitions/"+data[0],"opening")
-    self.publish("stat/"+self.clientId+"/partitions/"+data[0]+"/changedBy",data[1:4])
-    self.publish("stat/"+self.clientId+"/partitions/"+data[0]+"/changedOn",time.strftime("%Y-%m-%dT%H:%M:%S"))
+    self.publish("partitions/"+data[0],"opening")
+    self.publish("partitions/"+data[0]+"/changedBy",data[1:4])
+    self.publish("partitions/"+data[0]+"/changedOn",time.strftime("%Y-%m-%dT%H:%M:%S"))
   
   def c901(self, cmd, data):
     self.log.info("Alive=%s",data)
-    self.publish("stat/"+self.clientId+"/alive",time.strftime("%Y-%m-%dT%H:%M:%S"))
+    self.publish("alive",time.strftime("%Y-%m-%dT%H:%M:%S"))
   
   def c903(self, cmd, data):
     self.log.info("DSC LED status=%s",data)
@@ -209,7 +209,7 @@ class DSCIT100(threading.Thread):
     s = 'off'
     if data[1] == '1': s='on'
 
-    self.publish("stat/"+self.clientId+"/leds/"+led,s)
+    self.publish("leds/"+led,s)
   
   # do nothing
   def donothing(self, cmd, data):
@@ -242,13 +242,14 @@ class DSCIT100(threading.Thread):
     f(cmd, data)
   
   # display all incoming messages
-  def on_message(self, userdata, message):
+  def _on_message(self, userdata, message):
     self.log.info("MQTT received msg=%s",message.payload)
   
-  def on_publish(self, userdata, mid):
-    self.receivedMessages.append(mid)
+  def _on_publish(self, client, userdata, mid):
+    return
+    #self.receivedMessages.append(mid)
   
-  def on_mqtt_connect(self, client, userdata, flags, rc):
+  def _on_mqtt_connect(self, client, userdata, flags, rc):
     self.mqtt_connected = rc
     self.mqtt_reconnect = 0
     if rc != 0:
@@ -267,11 +268,9 @@ class DSCIT100(threading.Thread):
       self.mqtt_reconnect_delay = 10
   
   # publish a message
-  def publish(self, topic, message, waitForAck = False):
-    mid = self.mqtt.publish(topic, message, 2)[1]
-    if (waitForAck):
-        while mid not in self.receivedMessages:
-            time.sleep(0.25)
+  def publish(self, topic, message, qos=1, retain=False):
+    self.log.debug("Publishing topic=%s msg=%s",self.clientId+"/"+topic,message)
+    mid = self.mqtt.publish(self.clientId+"/"+topic, message, qos, retain)[1]
 
 def stop_script_handler(msg, logger):
   logger.info(msg)
@@ -294,7 +293,7 @@ log.addHandler(logging.StreamHandler())
 
 if cfg.serialPort == "":
   log.fatal("Serial port not specified.")
-  exit(1)
+  sys.exit("Serial port not specified")
 
 # handle gracefull end in case of service stop
 signal.signal(signal.SIGTERM, lambda signo,
@@ -306,6 +305,9 @@ signal.signal(signal.SIGHUP, lambda signo,
 
 log.info("Opening serial port port=%s", cfg.serialPort)
 ser = serial.Serial(cfg.serialPort,timeout=1)  # open serial port
+if ser.closed:
+  log.fatal("Unable to open serial port %s",cfg.serialPort)
+  sys.exit("Unable to open serial port")
 
 # connect the client to Cumulocity IoT and register a device
 log.info("Creating MQTT client for %s",cfg.serverUrl)
@@ -327,4 +329,5 @@ except KeyboardInterrupt:
 # perform some cleanup
 log.info("Stopping device id=%s", cfg.devId)
 dsc.stop()
+ser.close()
 log.info('DSC-IT100 stopped.')
