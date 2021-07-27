@@ -1,0 +1,9 @@
+[dsc-it100]
+id=dscit100
+serialport=/dev/ttyUSB0
+host=localhost
+username=
+password=
+qos=1
+
+
